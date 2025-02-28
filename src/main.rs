@@ -1,4 +1,4 @@
-use std::{fs::{self, DirEntry, ReadDir}, io::{self, stdout, BufReader, Error, Result, Write}, path::{Path, PathBuf}, process::exit, time::SystemTime};
+use std::{fs::{self, DirEntry, ReadDir}, io::{self, stdout, BufReader, Error, Result, Write}, path::{Path, PathBuf}, process::exit, time::SystemTime, u128};
 use serde::{Deserialize, Serialize};
 use crossterm::{cursor::{EnableBlinking, MoveTo, SavePosition}, execute, style::{Color, Print, ResetColor, SetForegroundColor}, terminal::{self, ClearType}};
 use tabled::settings::{object::FirstRow, Alignment, Margin, Padding, Style};
@@ -192,12 +192,37 @@ fn main_console() {
                     println!();
                     print_colored("Front: ", Color::Blue);
                     println!("{}", card.front);
-                    let user_input = input_prompt();
-                    println!();
+                    let user_input = input_prompt().to_lowercase();
 
                     if user_input.trim() == "q" {
                         break; 
                     }
+                    
+                    let user_input_chars: Vec<char> = user_input.to_lowercase().chars().collect();
+                    let chars_count = card.back.chars().count();
+                    let mut matches: u128 = 0;
+                    for (index, char) in card.back.chars().enumerate() {
+                        let bitmask = 1 << index;
+                        if index < user_input.len() && char == user_input_chars[index] {
+                            matches = matches | bitmask;
+                        }
+                    }
+
+                    let mut matches_counter = 0;
+                    for char in card.back.chars() {
+                        let bit = matches & 1;
+                        if bit & 1 == 1 {
+                            print_colored(char.to_string().as_str(), Color::Green);
+                            matches_counter += 1;
+                        } else {
+                            print_colored(char.to_string().as_str(), Color::Red);
+                        }
+                        matches = matches >> 1;
+                    }
+                    println!();
+                    let accuaracy = matches_counter as f32 / chars_count as f32 * 100.0; 
+                    print_colored("Accuaracy: ", Color::Blue);
+                    print_colored(&format!("{accuaracy}%\n\n").to_string(), Color::Green);
                 }
 
             }
