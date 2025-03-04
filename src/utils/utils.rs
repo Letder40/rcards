@@ -1,7 +1,6 @@
 use std::{fs::{self, DirEntry, ReadDir}, io::{self, Error, Result}, path::{Path, PathBuf}, time::SystemTime};
-use crossterm::style::Color;
 
-use crate::utils::print::print_colored;
+use super::print::{print_flag, Flags};
 
 fn read_rcard_vault() -> ReadDir {
     let mut path = std::env::var_os("HOME").expect("home env var is not set, HOME env variable is used to determine card vault");
@@ -31,8 +30,7 @@ pub fn get_decks() -> Vec<String> {
         .collect()
 }
 
-
-pub fn get_deck_from_id(id: usize) -> Result<PathBuf> {
+pub fn deck_path_from_id(id: usize) -> Result<PathBuf> {
     let mut path = std::env::var_os("HOME").expect("home env var is not set, HOME env variable is used to determine card vault");
     let decks = get_decks();
     if decks.len() - 1 >= id {
@@ -40,23 +38,19 @@ pub fn get_deck_from_id(id: usize) -> Result<PathBuf> {
         path.push(&decks[id]);
         path.push(".rcard");
     } else {
-        print_colored("[!] Error: ", Color::Red);
-        println!("Invalid Id");
         return Err(Error::new(io::ErrorKind::NotFound, "Id not found"));
     }
 
     let path = PathBuf::from(path);
 
     if !path.exists() {
-        print_colored("[!] Error: ", Color::Red);
-        println!("Invalid Id");
         return Err(Error::new(io::ErrorKind::NotFound, "File not found"));
     }
 
     Ok(path)
 }
 
-pub fn get_deck_from_name(name: &str) -> Result<PathBuf> {
+pub fn deck_path_from_name(name: &str) -> Result<PathBuf> {
     let mut path = std::env::var_os("HOME").expect("home env var is not set, HOME env variable is used to determine card vault");
     path.push("/.rcard_vault/");
     path.push(name);
@@ -65,10 +59,23 @@ pub fn get_deck_from_name(name: &str) -> Result<PathBuf> {
     let path = PathBuf::from(path);
 
     if !path.exists() {
-        print_colored("[!] Error: ", Color::Red);
-        println!("deck not exists");
         return Err(Error::new(io::ErrorKind::NotFound, "Id not found"));
     }
 
     Ok(path)
+}
+
+pub fn get_deckpath(guess: &str) -> Result<PathBuf> {
+    let path = if guess.parse::<usize>().is_ok() {
+        let id: usize = guess.parse().unwrap();
+        deck_path_from_id(id)
+    } else {
+        deck_path_from_name(guess)
+    };
+
+    if path.is_err() {
+        print_flag(Flags::Error, "deck not exists");
+    }
+
+    return path;
 }

@@ -19,6 +19,11 @@ pub enum DeckError {
     Serde(serde_json::Error)
 }
 
+pub enum DeckSaveMode {
+    New,
+    Add
+}
+
 impl Deck {
     pub fn new(name: String, cards: Vec<Card>) -> Self {
         Self { name, cards }
@@ -32,8 +37,11 @@ impl Deck {
         Ok(deck)
     }
 
-    pub fn save(self, path: impl AsRef<Path>) -> Result<(), DeckError> {
-        let mut deck_file = File::create_new(&path).map_err(DeckError::Io)?;
+    pub fn save(self, path: impl AsRef<Path>, deck_operation: &DeckSaveMode) -> Result<(), DeckError> {
+        let mut deck_file = match deck_operation {
+            DeckSaveMode::New => File::create_new(&path).map_err(DeckError::Io)?,
+            DeckSaveMode::Add => File::create(&path).map_err(DeckError::Io)?,
+        };
         let card_data = serde_json::to_string(&self).unwrap();
         deck_file.write_all(card_data.as_bytes()).unwrap();
 
